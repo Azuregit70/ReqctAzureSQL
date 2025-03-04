@@ -11,24 +11,25 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(""); // Reset error state
-
         try {
+            console.log("Attempting login with:", { username, password });
+
             const response = await login(username, password);
-            if (response.token) {
-                // ✅ Store JWT token
-                if (rememberMe) {
-                    localStorage.setItem("token", response.token);
-                } else {
-                    sessionStorage.setItem("token", response.token);
-                }
-                alert("Login Successful!");
-                navigate("/dashboard"); // ✅ Redirect after login
+            console.log("API Response:", response);
+
+            if (response?.token) { // Ensure token exists in response
+                localStorage.setItem("token", response.token);
+                localStorage.setItem("rememberMe", rememberMe);
+
+                console.log("Login successful, redirecting...");
+                navigate("/products"); // Redirect after login
             } else {
-                setError("Invalid credentials.");
+                console.error("Login failed, no token received.");
+                setError("Invalid credentials");
             }
         } catch (error) {
-            setError("Login failed. Please try again.");
+            console.error("Login error:", error);
+            setError("Invalid credentials");
         }
     };
 

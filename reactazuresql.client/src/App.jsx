@@ -1,11 +1,13 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login.jsx"; // Import the Login component
+import Login from "./pages/login";
+import Products from "./pages/products";
 
 function App() {
     return (
         <Router>
             <Routes>
                 <Route path="/" element={<Login />} />
+                <Route path="/products" element={<Products />} />
             </Routes>
         </Router>
     );

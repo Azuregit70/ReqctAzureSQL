@@ -1,15 +1,24 @@
-using Microsoft.EntityFrameworkCore;
-using ReactAzureSQL.Server.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using ReactAzureSQL.Server.Data;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-// Add services to the container.
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
+// Add CORS policy BEFORE services
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", policy =>
+    {
+        policy.WithOrigins("http://localhost:54721") // Ensure React URL is correct
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // Required if sending credentials (JWT, Cookies)
+    });
+});
+
+// Add authentication with JWT
 var key = Encoding.ASCII.GetBytes("politeatonetwothreefourfivesixseverneightnineten");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -18,28 +27,51 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(key),
-            ValidateIssuer = false,
-            ValidateAudience = false
+            ValidateIssuer = false, // Consider setting `true` if you have an issuer
+            ValidateAudience = false // Consider setting `true` if you have an audience
+        };
+
+        // Allow frontend to send the token via the "Authorization" header
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Cookies["token"]; // If using cookies
+                if (string.IsNullOrEmpty(context.Token) && !string.IsNullOrEmpty(token))
+                {
+                    context.Token = token;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
-// Add services to the container.
+
+// Add database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Add controllers and API documentation
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
-
-app.UseDefaultFiles();
-app.UseStaticFiles();
-
 // Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
 
 app.UseHttpsRedirection();
 app.UseRouting();
+// Use CORS **before authentication & authorization**
+app.UseCors("AllowSpecificOrigin");
+
+// Apply authentication & authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Map controllers
 app.MapControllers();
 
-
 app.Run();
-
-

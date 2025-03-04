@@ -1,11 +1,21 @@
 import axios from "axios";
 
-const API_URL = "https://localhost:5001/api/auth";
-
 export const login = async (username, password) => {
-    const response = await axios.post(`${API_URL}/login`, { username, password });
-    if (response.data.token) {
-        localStorage.setItem("user", JSON.stringify(response.data));
+    try {
+        const response = await fetch("https://localhost:7155/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials:"include",
+            body: JSON.stringify({ username, password }),
+        });
+
+        if (!response.ok) {
+            throw new Error("Invalid credentials");
+        }
+
+        return await response.json(); // Expecting { "token": "JWT_HERE" }
+    } catch (error) {
+        console.error("AuthService Login Error:", error);
+        throw error;
     }
-    return response.data;
 };
